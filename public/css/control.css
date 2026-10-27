@@ -1,0 +1,138 @@
+:root {
+  color-scheme: dark;
+  --bg: #15171e;
+  --panel: #1e212b;
+  --panel-2: #272b38;
+  --line: #343a4b;
+  --text: #e8eaf0;
+  --muted: #9097a8;
+  --accent: #e3350d;
+  --accent-2: #ff6a3d;
+  --shiny: #ffd84a;
+  --ok: #4ade80;
+  --radius: 10px;
+  font: 14px/1.4 'Segoe UI', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); padding: 0 16px 16px; }
+button, input { font: inherit; color: inherit; }
+
+.topbar {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 0; background: var(--bg);
+}
+.logo { width: 28px; height: 28px; image-rendering: pixelated; }
+h1 { font-size: 18px; margin: 0; flex: 1; letter-spacing: 0.02em; }
+.status { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #666; }
+.status.live { color: var(--ok); }
+.status.live::before { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+
+.btn {
+  border: 0; border-radius: 8px; padding: 7px 12px; cursor: pointer;
+  background: var(--accent); color: #fff; font-weight: 600;
+}
+.btn:hover { background: var(--accent-2); }
+.btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.btn.ghost:hover { color: var(--text); border-color: var(--muted); }
+
+/* Settings */
+.settings {
+  display: flex; flex-wrap: wrap; gap: 12px 18px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px 14px; margin-bottom: 14px;
+}
+.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.label output { color: var(--text); text-transform: none; margin-left: 4px; }
+.seg { display: inline-flex; flex-wrap: wrap; background: var(--panel-2); border-radius: 8px; padding: 2px; }
+.seg button {
+  border: 0; background: transparent; padding: 5px 10px; border-radius: 6px; cursor: pointer; color: var(--muted);
+}
+.seg button:hover { color: var(--text); }
+.seg button.on { background: var(--accent); color: #fff; }
+.seg button:disabled { opacity: 0.35; cursor: not-allowed; }
+input[type='range'] { accent-color: var(--accent); width: 160px; }
+.checks { display: flex; gap: 12px; padding-top: 4px; }
+.checks input { accent-color: var(--accent); }
+[hidden] { display: none !important; }
+
+.more { flex-basis: 100%; border-top: 1px solid var(--line); padding-top: 8px; }
+.more summary { cursor: pointer; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+.more-grid { display: flex; flex-wrap: wrap; gap: 12px 18px; margin-top: 10px; }
+
+/* Slots */
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 10px; display: flex; flex-direction: column; gap: 8px;
+}
+.card.dragging { opacity: 0.4; }
+.card.drop-target { border-color: var(--accent); }
+.card-head { display: flex; align-items: center; gap: 6px; }
+.grip { cursor: grab; color: var(--muted); user-select: none; }
+.slot-no { flex: 1; font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+.icon-btn {
+  border: 1px solid var(--line); background: var(--panel-2); border-radius: 6px;
+  width: 28px; height: 28px; cursor: pointer; color: var(--muted); padding: 0;
+}
+.icon-btn:hover { color: var(--text); border-color: var(--muted); }
+.shiny-btn.on { color: #1b1b1b; background: var(--shiny); border-color: var(--shiny); }
+.shiny-btn.forced { color: var(--shiny); }
+
+.preview {
+  height: 136px; border-radius: 8px;
+  background: radial-gradient(circle at 50% 60%, #2d3346, #1a1d27 70%);
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  gap: 4px; padding: 6px; overflow: hidden;
+}
+.preview img { width: 100px; height: 100px; object-fit: contain; object-position: center bottom; }
+.preview.pixel img { image-rendering: pixelated; }
+.preview img:not([src]) { visibility: hidden; }
+.preview-name {
+  font-size: 12px; color: var(--muted); max-width: 100%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.pickers { display: flex; flex-direction: column; gap: 6px; }
+.swap-btn { align-self: center; height: 22px; }
+
+.nickname, .combo input {
+  width: 100%; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px;
+}
+.nickname:focus, .combo input:focus { outline: none; border-color: var(--accent); }
+
+/* Combobox */
+.combo { position: relative; }
+.combo input { padding-left: 38px; }
+.combo .combo-icon {
+  position: absolute; left: 4px; top: 50%; transform: translateY(-50%);
+  width: 30px; height: 30px; image-rendering: pixelated; pointer-events: none;
+}
+.combo .combo-icon:not([src]) { display: none; }
+.combo-list {
+  position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px);
+  max-height: 280px; overflow-y: auto; margin: 0; padding: 4px; list-style: none;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.combo-list li {
+  display: flex; align-items: center; gap: 8px; padding: 3px 6px; border-radius: 6px; cursor: pointer;
+}
+.combo-list li.active { background: var(--accent); color: #fff; }
+.combo-list li img { width: 32px; height: 32px; image-rendering: pixelated; flex: none; }
+.combo-list .no { color: var(--muted); font-size: 12px; width: 44px; flex: none; }
+.combo-list li.active .no { color: #ffe1d6; }
+.combo-list .empty { color: var(--muted); padding: 8px; cursor: default; }
+
+.teams { display: flex; flex-wrap: wrap; gap: 6px; }
+.teams select {
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; color: var(--text);
+  max-width: 180px;
+}
+.foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-top: 14px; color: var(--muted); font-size: 12px;
+}

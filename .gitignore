@@ -1,0 +1,10 @@
+# Local runtime files
+config.json
+state.json
+teams.json
+cache/
+node_modules/
+
+# IDE
+.idea/
+out/

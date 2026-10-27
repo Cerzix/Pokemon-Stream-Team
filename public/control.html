@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stream Team Control</title>
+  <link rel="icon" href="/img/pokeapi/sprites/items/poke-ball.png">
+  <link rel="stylesheet" href="/css/control.css">
+</head>
+<body>
+  <header class="topbar">
+    <img class="logo" src="/img/pokeapi/sprites/items/poke-ball.png" alt="">
+    <h1>Stream Team</h1>
+    <span id="status" class="status" title="Connection to the overlay server">offline</span>
+    <button id="copy-url" class="btn" type="button" title="Copy the URL to paste into an OBS Browser Source">Copy overlay URL</button>
+  </header>
+
+  <section class="settings" aria-label="Display settings">
+    <div class="field">
+      <span class="label">Mode</span>
+      <div class="seg" data-setting="mode">
+        <button type="button" data-value="standard">Standard</button>
+        <button type="button" data-value="fusion">Infinite Fusion</button>
+      </div>
+    </div>
+    <div class="field" data-hide-in="fusion">
+      <span class="label">Sprites</span>
+      <div class="seg" data-setting="animated">
+        <button type="button" data-value="true">GIF</button>
+        <button type="button" data-value="false">PNG</button>
+      </div>
+    </div>
+    <div class="field" data-hide-in="fusion">
+      <span class="label">PNG style</span>
+      <div class="seg" data-setting="style">
+        <button type="button" data-value="pixel">Pixel</button>
+        <button type="button" data-value="home">HOME</button>
+        <button type="button" data-value="artwork">Artwork</button>
+        <button type="button" data-value="local" id="style-local">My icons</button>
+      </div>
+    </div>
+    <div class="field">
+      <span class="label">Shiny</span>
+      <div class="seg" data-setting="shiny">
+        <button type="button" data-value="false">Per slot</button>
+        <button type="button" data-value="true">All ★</button>
+      </div>
+    </div>
+    <div class="field" data-show-in="fusion">
+      <span class="label">Shiny hue <output id="hue-out"></output></span>
+      <input type="range" min="0" max="359" step="1" data-setting="fusionShinyHue">
+    </div>
+    <div class="field">
+      <span class="label">Names</span>
+      <div class="seg" data-setting="language">
+        <button type="button" data-value="en">EN</button>
+        <button type="button" data-value="de">DE</button>
+      </div>
+    </div>
+
+    <details class="more">
+      <summary>Layout</summary>
+      <div class="more-grid">
+        <div class="field">
+          <span class="label">Arrangement</span>
+          <div class="seg" data-setting="layout">
+            <button type="button" data-value="row">1×6</button>
+            <button type="button" data-value="grid3">3×2</button>
+            <button type="button" data-value="grid2">2×3</button>
+            <button type="button" data-value="column">6×1</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="label">Empty slots</span>
+          <div class="seg" data-setting="emptySlots">
+            <button type="button" data-value="pokeball">Poké Ball</button>
+            <button type="button" data-value="frame">Frame</button>
+            <button type="button" data-value="hidden">Hidden</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="label">Slot size <output id="size-out"></output></span>
+          <input type="range" min="48" max="320" step="4" data-setting="size">
+        </div>
+        <div class="field">
+          <span class="label">Show</span>
+          <div class="checks">
+            <label><input type="checkbox" data-setting="showNames"> Names</label>
+            <label><input type="checkbox" data-setting="showFrame"> Frames</label>
+          </div>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <section id="slots" class="slots" aria-label="Party slots"></section>
+
+  <footer class="foot">
+    <div class="teams">
+      <select id="team-select" aria-label="Saved teams"><option value="">Saved teams…</option></select>
+      <button id="team-load" class="btn ghost" type="button">Load</button>
+      <button id="team-save" class="btn ghost" type="button">Save as…</button>
+      <button id="team-delete" class="btn ghost" type="button">Delete</button>
+      <button id="clear-all" class="btn ghost" type="button">Clear party</button>
+    </div>
+    <span>Drag slots to reorder · Sprites: PokeAPI &amp; Infinite Fusion Dex</span>
+  </footer>
+
+  <template id="slot-template">
+    <article class="card" draggable="true">
+      <div class="card-head">
+        <span class="grip" title="Drag to reorder">⠿</span>
+        <span class="slot-no"></span>
+        <button type="button" class="icon-btn shiny-btn" title="Shiny">★</button>
+        <button type="button" class="icon-btn clear-btn" title="Clear slot">✕</button>
+      </div>
+      <div class="preview"><img class="sprite" alt=""><span class="preview-name"></span></div>
+      <div class="pickers">
+        <div class="picker" data-field="id" data-placeholder="Search Pokémon…"></div>
+        <div class="picker" data-field="head" data-placeholder="Head…"></div>
+        <button type="button" class="icon-btn swap-btn" title="Swap head and body">⇅</button>
+        <div class="picker" data-field="body" data-placeholder="Body (optional)…"></div>
+      </div>
+      <input class="nickname" type="text" maxlength="24" placeholder="Nickname (optional)">
+    </article>
+  </template>
+
+  <script type="module" src="/js/control.js"></script>
+</body>
+</html>

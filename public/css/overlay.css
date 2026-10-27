@@ -1,0 +1,92 @@
+/* OBS browser source: transparent page, everything sized from --size. */
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&display=swap');
+
+:root {
+  --size: 128px;
+  --gap: calc(var(--size) * 0.1);
+  --frame-bg: rgba(16, 20, 36, 0.72);
+  --frame-border: rgba(255, 255, 255, 0.85);
+  --name-color: #fff;
+  --shiny: #ffd84a;
+}
+
+html, body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.party {
+  display: grid;
+  gap: var(--gap);
+  padding: var(--gap);
+  width: max-content;
+  font-family: 'Pixelify Sans', 'Segoe UI', sans-serif;
+}
+.party[data-layout='row'] { grid-template-columns: repeat(6, var(--size)); }
+.party[data-layout='column'] { grid-template-columns: var(--size); }
+.party[data-layout='grid3'] { grid-template-columns: repeat(3, var(--size)); }
+.party[data-layout='grid2'] { grid-template-columns: repeat(2, var(--size)); }
+
+.slot {
+  position: relative;
+  width: var(--size);
+  height: var(--size);
+  display: grid;
+  place-items: center;
+  border-radius: calc(var(--size) * 0.14);
+}
+.party.framed .slot {
+  background: var(--frame-bg);
+  box-shadow: inset 0 0 0 calc(var(--size) * 0.025) var(--frame-border);
+}
+.slot.hidden { visibility: hidden; }
+
+.slot img.sprite {
+  width: 92%;
+  height: 92%;
+  object-fit: contain;
+  object-position: center bottom;
+  margin-bottom: 4%;
+}
+.party.pixel .slot img.sprite { image-rendering: pixelated; }
+.slot.named img.sprite { height: 76%; margin-bottom: 20%; }
+.slot img.sprite:not([src]) { visibility: hidden; }
+
+.slot img.ball {
+  width: 34%;
+  height: 34%;
+  image-rendering: pixelated;
+  opacity: 0.55;
+  filter: grayscale(0.3);
+}
+
+.slot .name {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: 4%;
+  color: var(--name-color);
+  font-size: calc(var(--size) * 0.12);
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 3px #000, 0 2px 2px #000;
+}
+
+.slot .star {
+  position: absolute;
+  top: 5%;
+  right: 7%;
+  color: var(--shiny);
+  font-size: calc(var(--size) * 0.15);
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+}
+
+.slot.changed img.sprite { animation: pop 420ms cubic-bezier(0.2, 1.4, 0.4, 1); }
+@keyframes pop {
+  from { transform: scale(0.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

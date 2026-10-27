@@ -1,0 +1,12 @@
+{
+  "name": "pokemon-stream-team",
+  "version": "2.0.0",
+  "description": "OBS overlay showing your current Pokemon party, with a control panel to pick each slot. Supports GIF/PNG, shiny and Pokemon Infinite Fusion sprites.",
+  "private": true,
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server/index.js",
+    "update-data": "node scripts/update-data.js"
+  }
+}
