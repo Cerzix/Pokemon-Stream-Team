@@ -4,8 +4,8 @@ Show your current Pokémon party on stream. Pick each slot from a searchable dro
 control panel and the OBS overlay updates live. Built for randomizer and Nuzlocke runs, and it
 supports **Pokémon Infinite Fusion**.
 
-- 6 party slots, each with a searchable dropdown of every Pokémon and form (1351, by English or
-  German name or dex number)
+- 6 party slots, each with a searchable dropdown of every Pokémon and every form that looks
+  different (1315; by English or German name or dex number)
 - **GIF** (animated: smooth 3D renders or Gen 5 pixel style) or **PNG** sprites (Pixel, HOME 3D,
   official artwork, or your own icon pack)
 - **Shiny** per slot, or all slots at once
@@ -14,7 +14,8 @@ supports **Pokémon Infinite Fusion**.
 - **Horizontal or vertical** party, in 1–3 rows or columns
 - **Single-slot sources**: one OBS source per slot (sprite or name) to build your own layout
 - Nicknames, drag & drop reordering, saved teams, size, frames, names and empty-slot style
-- All sprites are cached on disk, so the overlay keeps working when GitHub or the CDN is slow
+- All sprites are cached on disk, and the party's normal, shiny, GIF and PNG variants are
+  downloaded in advance, so toggling shiny or GIF/PNG on stream is instant
 
 ## Requirements
 
@@ -108,7 +109,10 @@ approximated with a hue shift. You can adjust it with the *Shiny hue* slider.
 ## Updating the Pokémon lists
 
 `data/pokedex.json` (PokeAPI, English + German names, Showdown sprite ids) and `data/fusion-dex.json` (Infinite Fusion
-dex numbers) are bundled snapshots. Refresh them after a new game or fusion release:
+dex numbers) are bundled snapshots. Forms whose sprite is pixel-identical to another form of
+the same Pokémon (totems, Minior's meteor colours, Pumpkaboo sizes...) or that have no sprite
+(Koraidon/Miraidon modes) are marked `hidden` and left out of the dropdown. Refresh the
+snapshots after a new game or fusion release:
 
 ```sh
 npm run update-data

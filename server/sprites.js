@@ -13,7 +13,8 @@ const CONTENT_TYPES = { png: 'image/png', gif: 'image/gif', svg: 'image/svg+xml'
 const MISS_TTL = 6 * 60 * 60 * 1000; // re-check missing sprites after 6h (new fusion art gets added)
 const ERROR_RETRY = 60 * 1000; // upstream errors (e.g. Showdown's intermittent 522) are retried sooner
 const UPSTREAM_TIMEOUT = 45 * 1000;
-const SLOW_RESPONSE = 4000;
+const SLOW_RESPONSE = 1500;
+const PREFETCH_CONCURRENCY = 6;
 const SLOW = Symbol('slow');
 const FAILED = Symbol('failed');
 
@@ -38,35 +39,23 @@ function createSpriteProxy(cacheDir) {
     return data;
   }
 
-  async function handle(route, res) {
+  function parse(route) {
     const [source, ...rest] = route.split('/');
     const relPath = rest.join('/');
-    if (!SOURCES[source] || !SAFE_PATH.test(relPath) || relPath.includes('..')) {
-      res.writeHead(400).end('Bad sprite path');
-      return;
-    }
+    if (!SOURCES[source] || !SAFE_PATH.test(relPath) || relPath.includes('..')) return null;
+    return { source, relPath, key: `${source}/${relPath}`, filePath: path.join(cacheDir, source, ...relPath.split('/')) };
+  }
 
-    const key = `${source}/${relPath}`;
-    const type = CONTENT_TYPES[path.extname(relPath).slice(1)];
-    const filePath = path.join(cacheDir, source, ...relPath.split('/'));
-
-    const reply = (data) => {
-      if (!data) {
-        res.writeHead(404, { 'cache-control': 'no-store' }).end();
-        return;
-      }
-      res.writeHead(200, { 'content-type': type, 'cache-control': 'public, max-age=604800' });
-      res.end(data);
-    };
-
+  // Resolves to the sprite bytes, null (doesn't exist upstream) or FAILED.
+  async function load({ source, relPath, key, filePath }) {
     try {
-      return reply(await fs.promises.readFile(filePath));
+      return await fs.promises.readFile(filePath);
     } catch {
       // not cached yet
     }
 
     const missedAt = misses.get(key);
-    if (missedAt && Date.now() - missedAt < MISS_TTL) return reply(null);
+    if (missedAt && Date.now() - missedAt < MISS_TTL) return null;
 
     if (!inflight.has(key)) {
       const download = fetchUpstream(source, relPath, filePath)
@@ -82,18 +71,54 @@ function createSpriteProxy(cacheDir) {
         .finally(() => inflight.delete(key));
       inflight.set(key, download);
     }
+    return inflight.get(key);
+  }
+
+  async function handle(route, res) {
+    const target = parse(route);
+    if (!target) {
+      res.writeHead(400).end('Bad sprite path');
+      return;
+    }
 
     // Slow upstreams (Showdown can take ~20s for a cold file) shouldn't stall the overlay:
     // answer "try later" so the client shows its fallback, and let the download finish into the cache.
-    const result = await Promise.race([inflight.get(key), wait(SLOW_RESPONSE).then(() => SLOW)]);
+    const result = await Promise.race([load(target), wait(SLOW_RESPONSE).then(() => SLOW)]);
     if (result === SLOW || result === FAILED) {
-      res.writeHead(503, { 'cache-control': 'no-store', 'retry-after': '15' }).end();
+      res.writeHead(503, { 'cache-control': 'no-store', 'retry-after': '3' }).end();
       return;
     }
-    reply(result);
+    if (!result) {
+      res.writeHead(404, { 'cache-control': 'no-store' }).end();
+      return;
+    }
+    const type = CONTENT_TYPES[path.extname(target.relPath).slice(1)];
+    res.writeHead(200, { 'content-type': type, 'cache-control': 'public, max-age=604800' });
+    res.end(result);
   }
 
-  return { handle };
+  // Downloads sprites into the cache ahead of time, a few at a time.
+  const queue = [];
+  let running = 0;
+  function pump() {
+    while (running < PREFETCH_CONCURRENCY && queue.length) {
+      const target = queue.shift();
+      running++;
+      load(target).finally(() => {
+        running--;
+        pump();
+      });
+    }
+  }
+  function prefetch(routes) {
+    for (const route of routes) {
+      const target = parse(route);
+      if (target && !queue.some((t) => t.key === target.key)) queue.push(target);
+    }
+    pump();
+  }
+
+  return { handle, prefetch };
 }
 
 module.exports = { createSpriteProxy };

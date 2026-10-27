@@ -6,6 +6,7 @@ const { loadConfig, ROOT } = require('./config');
 const { createStore, sanitizeSlots } = require('./state');
 const { createTeams } = require('./teams');
 const { createFusionInfo } = require('./fusion-info');
+const { createPrefetcher } = require('./prefetch');
 const { createSpriteProxy } = require('./sprites');
 const { indexLocalIcons } = require('./local-icons');
 
@@ -29,6 +30,13 @@ const proxy = createSpriteProxy(path.join(ROOT, 'cache'));
 const localIcons = indexLocalIcons(config.localIconDir);
 const teams = createTeams(path.join(ROOT, 'teams.json'), sanitizeSlots);
 const fusionInfo = createFusionInfo(path.join(ROOT, 'cache', 'fusion-info'));
+
+createPrefetcher(proxy, ROOT)
+  .then((prefetchParty) => {
+    prefetchParty(store.get());
+    store.onChange(prefetchParty);
+  })
+  .catch((err) => console.warn(`Sprite prefetching disabled: ${err.message}`));
 
 const clients = new Set();
 store.onChange((state) => {

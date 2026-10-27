@@ -25,6 +25,7 @@ function standardOptions(lang) {
     label: p.name[lang] ?? p.name.en,
     icon: `/img/pokeapi/sprites/pokemon/${p.id}.png`,
     terms: [...new Set([p.name.en, p.name.de, p.slug])].map(normalize),
+    hidden: Boolean(p.hidden), // looks like another form; kept only so existing slots still resolve
   }));
 }
 

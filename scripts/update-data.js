@@ -6,11 +6,13 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { decodePng, pixelDifference } = require('./png');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const GRAPHQL = 'https://beta.pokeapi.co/graphql/v1beta';
 const REST = 'https://pokeapi.co/api/v2';
 const SHOWDOWN_DEX = 'https://play.pokemonshowdown.com/data/pokedex.json';
+const SPRITES = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/';
 const FUSION_DEX_PAGE = 'https://infinitefusiondex.com/pokedex';
 const LANG = { en: 9, de: 6 };
 const USER_AGENT = 'Mozilla/5.0 PokemonStreamTeam';
@@ -132,6 +134,51 @@ async function addShowdownIds(entries) {
   return entries;
 }
 
+// Forms whose sprite looks the same as an earlier form of the same species (totems, Minior's
+// meteor colours, Pumpkaboo sizes...) or that have no sprite at all (Koraidon/Miraidon modes)
+// get `hidden: true`. The picker skips them; they stay in the data so saved teams keep working.
+const SAME_SPRITE = 0.01; // < 1% of visible pixels differ
+
+async function markDuplicateForms(entries) {
+  const groups = new Map();
+  for (const e of entries) groups.set(e.species, [...(groups.get(e.species) ?? []), e]);
+  const multi = [...groups.values()].filter((g) => g.length > 1);
+
+  const images = new Map();
+  const ids = multi.flat().map((e) => e.id);
+  for (let i = 0; i < ids.length; i += 16) {
+    await Promise.all(
+      ids.slice(i, i + 16).map(async (id) => {
+        const res = await fetch(`${SPRITES}${id}.png`);
+        if (!res.ok) return;
+        try {
+          images.set(id, decodePng(Buffer.from(await res.arrayBuffer())));
+        } catch (err) {
+          console.warn(`  could not decode sprite ${id}: ${err.message}`);
+        }
+      }),
+    );
+  }
+
+  let hidden = 0;
+  for (const group of multi) {
+    const kept = [];
+    for (const entry of group.sort((a, b) => (a.id === a.species ? -1 : b.id === b.species ? 1 : a.id - b.id))) {
+      const image = images.get(entry.id);
+      const isDefault = entry.id === entry.species;
+      const duplicate = image
+        ? kept.some((k) => pixelDifference(image, k) < SAME_SPRITE)
+        : !entry.sd || entry.sd === group[0].sd; // no PokeAPI sprite: only keep if Showdown has its own
+      if (!isDefault && duplicate) {
+        entry.hidden = true;
+        hidden++;
+      } else if (image) kept.push(image);
+    }
+  }
+  console.log(`  ${hidden} forms hidden (same sprite as another form, or no sprite)`);
+  return entries;
+}
+
 async function buildFusionDex() {
   const res = await fetch(FUSION_DEX_PAGE, { headers: { 'user-agent': USER_AGENT } });
   if (!res.ok) throw new Error(`Fusion dex: HTTP ${res.status}`);
@@ -147,7 +194,7 @@ async function buildFusionDex() {
 async function main() {
   await fs.mkdir(DATA_DIR, { recursive: true });
 
-  const pokedex = await addShowdownIds(await buildPokedex());
+  const pokedex = await markDuplicateForms(await addShowdownIds(await buildPokedex()));
   await fs.writeFile(path.join(DATA_DIR, 'pokedex.json'), JSON.stringify(pokedex));
   console.log(`pokedex.json: ${pokedex.length} entries`);
 

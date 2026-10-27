@@ -1,5 +1,6 @@
 // Searchable dropdown with sprite thumbnails and keyboard navigation.
-// Options: { value, label, no, icon, terms } — `terms` is the lowercase search text.
+// Options: { value, label, no, icon, terms, hidden } — `terms` is the lowercase search text;
+// hidden options are never listed but can still be the current value.
 
 
 export function normalize(text) {
@@ -55,11 +56,12 @@ export class Combobox {
 
   search(query) {
     const q = normalize(query.trim());
-    if (!q) return this.options; // browsing: the whole dex, thumbnails load lazily while scrolling
+    const listed = this.options.filter((o) => !o.hidden);
+    if (!q) return listed; // browsing: the whole dex, thumbnails load lazily while scrolling
     const num = /^#?\d+$/.test(q) ? Number(q.replace('#', '')) : null;
     const starts = [];
     const contains = [];
-    for (const o of this.options) {
+    for (const o of listed) {
       if (num !== null) {
         if (o.no === num) starts.push(o);
         else if (String(o.no).startsWith(String(num))) contains.push(o);

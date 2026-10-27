@@ -162,7 +162,7 @@ function isSmoothSource(url) {
   return /\/showdown\/ani|\/other\/home\/|\/official-artwork\//.test(url);
 }
 
-const UPGRADE_RETRIES = [15000, 45000];
+const UPGRADE_RETRIES = [3000, 6000, 12000, 25000, 50000];
 
 // Points an <img> at the first candidate URL that loads, and marks pixel art for crisp scaling.
 // If the preferred sprite failed (often just slow: the server keeps downloading it in the
