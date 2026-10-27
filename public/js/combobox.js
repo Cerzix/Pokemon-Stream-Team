@@ -1,7 +1,6 @@
 // Searchable dropdown with sprite thumbnails and keyboard navigation.
 // Options: { value, label, no, icon, terms } — `terms` is the lowercase search text.
 
-const MAX_RESULTS = 80;
 
 export function normalize(text) {
   return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -56,7 +55,7 @@ export class Combobox {
 
   search(query) {
     const q = normalize(query.trim());
-    if (!q) return this.options.slice(0, MAX_RESULTS);
+    if (!q) return this.options; // browsing: the whole dex, thumbnails load lazily while scrolling
     const num = /^#?\d+$/.test(q) ? Number(q.replace('#', '')) : null;
     const starts = [];
     const contains = [];
@@ -66,9 +65,8 @@ export class Combobox {
         else if (String(o.no).startsWith(String(num))) contains.push(o);
       } else if (o.terms.some((t) => t.startsWith(q))) starts.push(o);
       else if (o.terms.some((t) => t.includes(q))) contains.push(o);
-      if (starts.length >= MAX_RESULTS) break;
     }
-    return starts.concat(contains).slice(0, MAX_RESULTS);
+    return starts.concat(contains);
   }
 
   open(query) {

@@ -4,12 +4,16 @@ Show your current Pokémon party on stream. Pick each slot from a searchable dro
 control panel and the OBS overlay updates live. Built for randomizer and Nuzlocke runs, and it
 supports **Pokémon Infinite Fusion**.
 
-- 6 party slots, each with a searchable dropdown (by name, English or German, or dex number)
-- **GIF** (animated) or **PNG** sprites, with Pixel, HOME 3D, official artwork or your own icon pack
+- 6 party slots, each with a searchable dropdown of every Pokémon and form (1351, by English or
+  German name or dex number)
+- **GIF** (animated: smooth 3D renders or Gen 5 pixel style) or **PNG** sprites (Pixel, HOME 3D,
+  official artwork, or your own icon pack)
 - **Shiny** per slot, or all slots at once
-- **Infinite Fusion mode**: pick head and body, using community custom sprites with auto-generated fallback
-- Nicknames, drag & drop reordering, saved teams
-- Layouts 1×6, 3×2, 2×3 and 6×1, plus size, frames, names and empty-slot style
+- **Infinite Fusion mode**: pick head and body, then any community custom sprite variant (with
+  artist credit) or the auto-generated one; official fusion names
+- **Horizontal or vertical** party, in 1–3 rows or columns
+- **Single-slot sources**: one OBS source per slot (sprite or name) to build your own layout
+- Nicknames, drag & drop reordering, saved teams, size, frames, names and empty-slot style
 - All sprites are cached on disk, so the overlay keeps working when GitHub or the CDN is slow
 
 ## Requirements
@@ -33,19 +37,37 @@ Then open the control panel at <http://localhost:8642/control>.
 2. **Control panel inside OBS** (optional): go to *Docks → Custom Browser Docks…* and add
    `http://localhost:8642/control`.
 
-Each overlay can override the shared layout with URL parameters, for example a second, vertical
-party bar in another scene:
+### Build your own layout from single slots
 
-```
-http://localhost:8642/overlay?layout=column&size=96&names=0&frame=0
-```
+The **OBS sources** panel in the control panel lists copyable URLs for every source:
 
-| Parameter | Values |
-|-----------|--------|
-| `layout`  | `row`, `grid3`, `grid2`, `column` |
-| `size`    | slot size in px |
-| `names`   | `0` / `1` |
-| `frame`   | `0` / `1` |
+| Source | URL |
+|--------|-----|
+| Full party | `/overlay` |
+| One slot's sprite | `/overlay?slot=3` (bare sprite that fills the whole browser source) |
+| One slot's name | `/overlay?slot=3&only=name` (plain text) |
+
+Put the slot sources wherever you like on your own frame graphics. Restyle the name text with
+the browser source's *Custom CSS* field, e.g. `.name-source { color: gold; font-family: Arial; }`.
+
+### URL parameters
+
+Any overlay URL can override the shared settings, so different scenes can show the party differently:
+
+| Parameter   | Values |
+|-------------|--------|
+| `direction` | `horizontal`, `vertical` |
+| `lines`     | `1`, `2`, `3` (rows when horizontal, columns when vertical) |
+| `size`      | slot size in px (full party only) |
+| `names`     | `0` / `1` (single slots default to `0`) |
+| `frame`     | `0` / `1` (single slots default to `0`) |
+| `empty`     | `pokeball`, `frame`, `hidden` |
+| `slot`      | `1`–`6`: show only that slot |
+| `only`      | `name` (with `slot`): show only the name as text |
+| `font`      | font size in px for name sources (default 32) |
+| `align`     | `left`, `center`, `right` for name sources |
+
+Example, a vertical two-column bar without names: `/overlay?direction=vertical&lines=2&names=0`
 
 ## Configuration
 
@@ -67,16 +89,25 @@ http://localhost:8642/overlay?layout=column&size=96&names=0&frame=0
 
 | Mode | Source |
 |------|--------|
-| GIF | [PokeAPI sprites](https://github.com/PokeAPI/sprites): Showdown animations, falling back to Black/White animations, then PNG |
+| GIF, 3D | [Pokémon Showdown](https://play.pokemonshowdown.com/sprites/ani/) animated 3D renders |
+| GIF, Pixel | [PokeAPI sprites](https://github.com/PokeAPI/sprites): Gen 5 style animations |
 | PNG | PokeAPI: front sprites, HOME renders or official artwork |
-| Infinite Fusion | [Infinite Fusion Dex](https://infinitefusiondex.com) CDN: custom art, falling back to the auto-generated fusion |
+| Infinite Fusion | [Infinite Fusion Dex](https://infinitefusiondex.com) CDN: custom art variants or the auto-generated fusion |
+
+Every GIF falls back to the other GIF style and then to PNG when a Pokémon has no animation
+(e.g. the newest Gen 9 Pokémon have no 3D GIFs yet). Showdown's server can take ~20 s the first
+time a sprite is requested; the overlay shows the fallback meanwhile and swaps the 3D GIF in once
+it has downloaded. After that it is served from the local cache.
+
+In Infinite Fusion mode the dropdowns list the 576 Pokémon the game contains, numbered by the
+game's own fusion dex. Standard mode lists all 1351 Pokémon and forms.
 
 Infinite Fusion has no separate shiny sprites (the game recolours them), so shiny fusions are
 approximated with a hue shift. You can adjust it with the *Shiny hue* slider.
 
 ## Updating the Pokémon lists
 
-`data/pokedex.json` (PokeAPI, English + German names) and `data/fusion-dex.json` (Infinite Fusion
+`data/pokedex.json` (PokeAPI, English + German names, Showdown sprite ids) and `data/fusion-dex.json` (Infinite Fusion
 dex numbers) are bundled snapshots. Refresh them after a new game or fusion release:
 
 ```sh

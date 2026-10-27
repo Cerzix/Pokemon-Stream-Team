@@ -30,7 +30,14 @@
         <button type="button" data-value="false">PNG</button>
       </div>
     </div>
-    <div class="field" data-hide-in="fusion">
+    <div class="field" data-hide-in="fusion" data-when="animated">
+      <span class="label">GIF style</span>
+      <div class="seg" data-setting="gifStyle">
+        <button type="button" data-value="3d" title="Smooth animated renders of the 3D models (Pokémon Showdown)">3D</button>
+        <button type="button" data-value="pixel" title="Gen 5 style animated pixel sprites">Pixel</button>
+      </div>
+    </div>
+    <div class="field" data-hide-in="fusion" data-when="static">
       <span class="label">PNG style</span>
       <div class="seg" data-setting="style">
         <button type="button" data-value="pixel">Pixel</button>
@@ -58,18 +65,25 @@
       </div>
     </div>
 
+    <div class="field">
+      <span class="label">Direction</span>
+      <div class="seg" data-setting="direction">
+        <button type="button" data-value="horizontal" title="Slots run left to right">↔ Horizontal</button>
+        <button type="button" data-value="vertical" title="Slots run top to bottom">↕ Vertical</button>
+      </div>
+    </div>
+    <div class="field">
+      <span class="label" id="lines-label">Rows</span>
+      <div class="seg" data-setting="lines" data-number>
+        <button type="button" data-value="1">1</button>
+        <button type="button" data-value="2">2</button>
+        <button type="button" data-value="3">3</button>
+      </div>
+    </div>
+
     <details class="more">
-      <summary>Layout</summary>
+      <summary>More layout options</summary>
       <div class="more-grid">
-        <div class="field">
-          <span class="label">Arrangement</span>
-          <div class="seg" data-setting="layout">
-            <button type="button" data-value="row">1×6</button>
-            <button type="button" data-value="grid3">3×2</button>
-            <button type="button" data-value="grid2">2×3</button>
-            <button type="button" data-value="column">6×1</button>
-          </div>
-        </div>
         <div class="field">
           <span class="label">Empty slots</span>
           <div class="seg" data-setting="emptySlots">
@@ -90,6 +104,17 @@
           </div>
         </div>
       </div>
+    </details>
+
+    <details class="more" id="sources">
+      <summary>OBS sources</summary>
+      <p class="hint">
+        Add each URL as an OBS <b>Browser</b> source. Use the full party, or build your own layout
+        from single slots: each slot source fills its whole browser source, so its size is the source size.
+        Name sources are plain text; restyle them in the source's <i>Custom CSS</i> field, e.g.
+        <code>.name-source { color: gold; font-family: Arial; }</code>
+      </p>
+      <div class="source-list" id="source-list"></div>
     </details>
   </section>
 
@@ -120,6 +145,10 @@
         <div class="picker" data-field="head" data-placeholder="Head…"></div>
         <button type="button" class="icon-btn swap-btn" title="Swap head and body">⇅</button>
         <div class="picker" data-field="body" data-placeholder="Body (optional)…"></div>
+      </div>
+      <div class="variants" hidden>
+        <span class="label">Sprite <span class="variant-info"></span></span>
+        <div class="variant-strip"></div>
       </div>
       <input class="nickname" type="text" maxlength="24" placeholder="Nickname (optional)">
     </article>

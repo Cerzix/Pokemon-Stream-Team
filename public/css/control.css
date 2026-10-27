@@ -89,7 +89,7 @@ input[type='range'] { accent-color: var(--accent); width: 160px; }
   gap: 4px; padding: 6px; overflow: hidden;
 }
 .preview img { width: 100px; height: 100px; object-fit: contain; object-position: center bottom; }
-.preview.pixel img { image-rendering: pixelated; }
+.preview img.pixel { image-rendering: pixelated; }
 .preview img:not([src]) { visibility: hidden; }
 .preview-name {
   font-size: 12px; color: var(--muted); max-width: 100%;
@@ -126,6 +126,36 @@ input[type='range'] { accent-color: var(--accent); width: 160px; }
 .combo-list .no { color: var(--muted); font-size: 12px; width: 44px; flex: none; }
 .combo-list li.active .no { color: #ffe1d6; }
 .combo-list .empty { color: var(--muted); padding: 8px; cursor: default; }
+
+/* Fusion sprite variants */
+.variants { display: flex; flex-direction: column; gap: 4px; }
+.variant-info { text-transform: none; letter-spacing: 0; color: var(--text); margin-left: 4px; }
+.variant-strip { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.variant {
+  flex: none; width: 52px; height: 52px; padding: 2px; cursor: pointer;
+  border: 2px solid var(--line); border-radius: 8px; background: var(--panel-2);
+  display: grid; place-items: center; position: relative;
+}
+.variant img { width: 44px; height: 44px; image-rendering: pixelated; object-fit: contain; }
+.variant:hover { border-color: var(--muted); }
+.variant.on { border-color: var(--accent); }
+.variant .tag {
+  position: absolute; bottom: 1px; right: 3px; font-size: 9px; color: var(--muted);
+  text-shadow: 0 0 2px #000;
+}
+.variant-strip .loading { color: var(--muted); font-size: 12px; padding: 6px 0; }
+
+/* OBS sources */
+.hint { color: var(--muted); font-size: 12px; margin: 8px 0; max-width: 760px; }
+.hint code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; color: var(--text); }
+.source-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 6px; }
+.source {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+  background: var(--panel-2); border-radius: 8px; padding: 4px 4px 4px 10px;
+}
+.source b { flex: none; width: 92px; font-size: 12px; font-weight: 600; }
+.source code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--muted); }
+.source .btn { padding: 4px 10px; font-size: 12px; }
 
 .teams { display: flex; flex-wrap: wrap; gap: 6px; }
 .teams select {

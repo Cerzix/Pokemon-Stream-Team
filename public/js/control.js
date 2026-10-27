@@ -1,5 +1,6 @@
 import {
-  loadData, subscribe, slotSprites, slotName, isShiny, spriteFilter, isPixelArt, setSprite, pad,
+  loadData, subscribe, slotSprites, slotName, isShiny, spriteFilter, setSprite, pad,
+  fusionInfo, onFusionInfo, fusionKey, EMPTY_SLOT,
 } from './shared.js';
 import { Combobox, normalize } from './combobox.js';
 
@@ -16,7 +17,9 @@ const cards = [];
 // ---- dropdown options -------------------------------------------------------
 
 function standardOptions(lang) {
-  return data.pokedex.map((p) => ({
+  // Forms (ids 10001+) are listed right after their base species.
+  const sorted = [...data.pokedex].sort((a, b) => a.species - b.species || a.id - b.id);
+  return sorted.map((p) => ({
     value: p.id,
     no: p.species,
     label: p.name[lang] ?? p.name.en,
@@ -85,7 +88,8 @@ document.querySelectorAll('.seg[data-setting]').forEach((seg) => {
   seg.addEventListener('click', (e) => {
     const button = e.target.closest('button[data-value]');
     if (!button || button.disabled) return;
-    update((s) => (s.settings[seg.dataset.setting] = parseSettingValue(button.dataset.value)));
+    const value = 'number' in seg.dataset ? Number(button.dataset.value) : parseSettingValue(button.dataset.value);
+    update((s) => (s.settings[seg.dataset.setting] = value));
   });
 });
 document.querySelectorAll('input[type=range][data-setting]').forEach((input) => {
@@ -114,7 +118,7 @@ document.getElementById('copy-url').addEventListener('click', async (e) => {
 
 document.getElementById('clear-all').addEventListener('click', () => {
   if (!confirm('Remove all Pokémon from the party?')) return;
-  update((s) => s.slots.forEach((slot, i) => (s.slots[i] = { id: null, head: null, body: null, shiny: false, nickname: '' })));
+  update((s) => (s.slots = s.slots.map(() => ({ ...EMPTY_SLOT }))));
 });
 
 // ---- saved teams -------------------------------------------------------------
@@ -171,9 +175,46 @@ function renderSettings() {
   document.getElementById('hue-out').textContent = `${settings.fusionShinyHue}°`;
   document.querySelectorAll('[data-hide-in]').forEach((el) => (el.hidden = el.dataset.hideIn === settings.mode));
   document.querySelectorAll('[data-show-in]').forEach((el) => (el.hidden = el.dataset.showIn !== settings.mode));
-  // PNG styles do nothing while GIFs are on (except as a fallback for missing GIFs).
-  document.querySelector('[data-setting=style]').closest('.field').style.opacity = settings.animated ? 0.55 : 1;
+  document.querySelectorAll('[data-when]').forEach((el) => {
+    const relevant = el.dataset.when === 'animated' ? settings.animated : !settings.animated;
+    el.hidden = el.hidden || !relevant;
+  });
+  document.getElementById('lines-label').textContent = settings.direction === 'vertical' ? 'Columns' : 'Rows';
 }
+
+// ---- OBS source URLs -----------------------------------------------------------
+
+function renderSources() {
+  const base = `${location.origin}/overlay`;
+  const sources = [['Full party', base]];
+  for (let i = 1; i <= 6; i++) sources.push([`Slot ${i} sprite`, `${base}?slot=${i}`]);
+  for (let i = 1; i <= 6; i++) sources.push([`Slot ${i} name`, `${base}?slot=${i}&only=name`]);
+
+  const list = document.getElementById('source-list');
+  for (const [label, url] of sources) {
+    const row = document.createElement('div');
+    row.className = 'source';
+    row.innerHTML = '<b></b><code></code><button type="button" class="btn ghost">Copy</button>';
+    row.querySelector('b').textContent = label;
+    row.querySelector('code').textContent = url.replace(location.origin, '');
+    row.querySelector('code').title = url;
+    row.querySelector('button').addEventListener('click', (e) => copyText(url, e.target));
+    list.append(row);
+  }
+}
+
+async function copyText(text, button) {
+  const original = button.textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    button.textContent = 'Copied!';
+  } catch {
+    prompt('Copy this URL:', text);
+  }
+  setTimeout(() => (button.textContent = original), 1500);
+}
+
+renderSources();
 
 // ---- slot cards --------------------------------------------------------------
 
@@ -188,19 +229,25 @@ function createCard(index) {
     const field = host.dataset.field;
     pickers[field] = new Combobox(host, {
       placeholder: host.dataset.placeholder,
-      onSelect: (value) => update((s) => (s.slots[index][field] = value)),
+      onSelect: (value) =>
+        update((s) => {
+          const slot = s.slots[index];
+          if (slot[field] !== value && field !== 'id') slot.alt = null; // variants differ per fusion
+          slot[field] = value;
+        }),
     });
   });
 
   el.querySelector('.shiny-btn').addEventListener('click', () => update((s) => (s.slots[index].shiny = !s.slots[index].shiny)));
   el.querySelector('.clear-btn').addEventListener('click', () =>
-    update((s) => (s.slots[index] = { id: null, head: null, body: null, shiny: false, nickname: '' })),
+    update((s) => (s.slots[index] = { ...EMPTY_SLOT })),
   );
   el.querySelector('.swap-btn').addEventListener('click', () =>
     update((s) => {
       const slot = s.slots[index];
       if (!slot.body) return;
       [slot.head, slot.body] = [slot.body, slot.head];
+      slot.alt = null;
     }),
   );
   const nickname = el.querySelector('.nickname');
@@ -232,7 +279,68 @@ function createCard(index) {
   });
 
   slotsEl.append(el);
-  return { el, pickers, nickname, preview: el.querySelector('.preview'), sprite: el.querySelector('.sprite') };
+  const variants = el.querySelector('.variants');
+  variants.querySelector('.variant-strip').addEventListener('click', (e) => {
+    const button = e.target.closest('.variant');
+    if (!button) return;
+    const alt = button.dataset.alt === 'auto' ? null : button.dataset.alt;
+    update((s) => (s.slots[index].alt = alt));
+  });
+
+  return { el, pickers, nickname, variants, sprite: el.querySelector('.sprite') };
+}
+
+// Thumbnail strip of every custom sprite for this fusion plus the auto-generated one.
+function renderVariants(card, slot, settings) {
+  const show = settings.mode === 'fusion' && Boolean(slot.head);
+  card.variants.hidden = !show;
+  if (!show) return;
+
+  const key = fusionKey(slot.head, slot.body);
+  const info = fusionInfo(slot.head, slot.body);
+  const strip = card.variants.querySelector('.variant-strip');
+  const stripKey = `${key}|${info ? 'ready' : 'loading'}`;
+
+  if (strip.dataset.key !== stripKey) {
+    strip.dataset.key = stripKey;
+    if (!info) {
+      strip.innerHTML = '<span class="loading">Loading sprite variants…</span>';
+    } else {
+      const options = info.alts.map((a) => ({
+        alt: a.ext,
+        src: `/img/fusion/custom/${info.key ?? key}${a.ext}.png`,
+        tag: a.ext || 'main',
+        title: `Custom sprite${a.artist ? ` by ${a.artist}` : ''}`,
+      }));
+      if (slot.body) {
+        options.push({ alt: 'generated', src: `/img/fusion/generated/${key}.png`, tag: 'auto', title: 'Auto-generated sprite' });
+      }
+      strip.innerHTML = '';
+      for (const o of options) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'variant';
+        button.dataset.alt = o.alt;
+        button.title = o.title;
+        button.innerHTML = '<img loading="lazy" alt=""><span class="tag"></span>';
+        button.querySelector('img').src = o.src;
+        button.querySelector('.tag').textContent = o.tag;
+        strip.append(button);
+      }
+      if (!options.length) strip.innerHTML = '<span class="loading">No sprites found for this combination.</span>';
+    }
+  }
+
+  // With no explicit choice the overlay shows the main custom sprite, else the generated one.
+  const customCount = info ? info.alts.length : 0;
+  const effective = slot.alt ?? (customCount ? '' : 'generated');
+  strip.querySelectorAll('.variant').forEach((b) => b.classList.toggle('on', b.dataset.alt === effective));
+  const chosen = info?.alts.find((a) => a.ext === effective);
+  card.variants.querySelector('.variant-info').textContent = !info
+    ? ''
+    : effective === 'generated'
+      ? `auto-generated · ${customCount} custom`
+      : `${customCount} custom${chosen?.artist ? ` · by ${chosen.artist}` : ''}`;
 }
 
 function renderSlots() {
@@ -269,7 +377,7 @@ function renderSlots() {
 
     setSprite(card.sprite, slotSprites(data, slot, settings));
     card.sprite.style.filter = spriteFilter(slot, settings);
-    card.preview.classList.toggle('pixel', isPixelArt(settings));
+    renderVariants(card, slot, settings);
     const name = slotName(data, slot, settings);
     const dex = fusion ? (slot.head ? `#${pad(slot.head)}${slot.body ? `/${pad(slot.body)}` : ''}` : '') : slot.id ? `#${pad(data.byId.get(slot.id)?.species ?? slot.id)}` : '';
     card.el.querySelector('.preview-name').textContent = name ? `${dex} ${name}${isShiny(slot, settings) ? ' ★' : ''}` : 'empty';
@@ -281,3 +389,5 @@ function render() {
   renderSettings();
   renderSlots();
 }
+
+onFusionInfo(render); // official fusion names and sprite variants arrive asynchronously

@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const { loadConfig, ROOT } = require('./config');
 const { createStore, sanitizeSlots } = require('./state');
 const { createTeams } = require('./teams');
+const { createFusionInfo } = require('./fusion-info');
 const { createSpriteProxy } = require('./sprites');
 const { indexLocalIcons } = require('./local-icons');
 
@@ -27,6 +28,7 @@ const store = createStore(path.join(ROOT, 'state.json'));
 const proxy = createSpriteProxy(path.join(ROOT, 'cache'));
 const localIcons = indexLocalIcons(config.localIconDir);
 const teams = createTeams(path.join(ROOT, 'teams.json'), sanitizeSlots);
+const fusionInfo = createFusionInfo(path.join(ROOT, 'cache', 'fusion-info'));
 
 const clients = new Set();
 store.onChange((state) => {
@@ -107,6 +109,14 @@ async function handle(req, res) {
       return sendJson(res, 400, { error: err.message });
     }
     return send(res, 405, 'Method not allowed');
+  }
+
+  if (route.startsWith('/api/fusion/')) {
+    try {
+      return sendJson(res, 200, await fusionInfo.get(route.slice('/api/fusion/'.length)));
+    } catch (err) {
+      return sendJson(res, err.message === 'Invalid fusion id' ? 400 : 502, { error: err.message });
+    }
   }
 
   if (route === '/api/local-icons') {

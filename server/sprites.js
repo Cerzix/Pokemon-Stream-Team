@@ -5,22 +5,30 @@ const path = require('node:path');
 const SOURCES = {
   pokeapi: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/',
   fusion: 'https://ifd-spaces.sfo2.cdn.digitaloceanspaces.com/',
+  showdown: 'https://play.pokemonshowdown.com/sprites/',
 };
 
 const SAFE_PATH = /^[A-Za-z0-9_\-./]+\.(png|gif|svg)$/;
 const CONTENT_TYPES = { png: 'image/png', gif: 'image/gif', svg: 'image/svg+xml' };
 const MISS_TTL = 6 * 60 * 60 * 1000; // re-check missing sprites after 6h (new fusion art gets added)
+const ERROR_RETRY = 60 * 1000; // upstream errors (e.g. Showdown's intermittent 522) are retried sooner
+const UPSTREAM_TIMEOUT = 45 * 1000;
+const SLOW_RESPONSE = 4000;
+const SLOW = Symbol('slow');
+const FAILED = Symbol('failed');
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Fetches sprites once, keeps them on disk, and serves them from there afterwards.
 // Keeps the overlay working offline and avoids GitHub rate limits mid-stream.
 function createSpriteProxy(cacheDir) {
   const misses = new Map(); // key -> timestamp of last 404
-  const inflight = new Map(); // key -> Promise<Buffer|null>
+  const inflight = new Map(); // key -> Promise<Buffer | null (404) | FAILED>
 
   async function fetchUpstream(source, relPath, filePath) {
     const res = await fetch(SOURCES[source] + relPath, {
-      headers: { 'user-agent': 'PokemonStreamTeam/1.0' },
-      signal: AbortSignal.timeout(15000),
+      headers: { 'user-agent': 'Mozilla/5.0 PokemonStreamTeam' },
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT),
     });
     if (res.status === 404 || res.status === 403) return null;
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -61,19 +69,28 @@ function createSpriteProxy(cacheDir) {
     if (missedAt && Date.now() - missedAt < MISS_TTL) return reply(null);
 
     if (!inflight.has(key)) {
-      inflight.set(
-        key,
-        fetchUpstream(source, relPath, filePath).finally(() => inflight.delete(key)),
-      );
+      const download = fetchUpstream(source, relPath, filePath)
+        .then((data) => {
+          if (!data) misses.set(key, Date.now());
+          return data;
+        })
+        .catch((err) => {
+          console.warn(`Sprite fetch failed for ${key}: ${err.message}`);
+          misses.set(key, Date.now() - MISS_TTL + ERROR_RETRY); // let the overlay fall back for a minute
+          return FAILED;
+        })
+        .finally(() => inflight.delete(key));
+      inflight.set(key, download);
     }
-    try {
-      const data = await inflight.get(key);
-      if (!data) misses.set(key, Date.now());
-      reply(data);
-    } catch (err) {
-      console.warn(`Sprite fetch failed for ${key}: ${err.message}`);
-      res.writeHead(502, { 'cache-control': 'no-store' }).end();
+
+    // Slow upstreams (Showdown can take ~20s for a cold file) shouldn't stall the overlay:
+    // answer "try later" so the client shows its fallback, and let the download finish into the cache.
+    const result = await Promise.race([inflight.get(key), wait(SLOW_RESPONSE).then(() => SLOW)]);
+    if (result === SLOW || result === FAILED) {
+      res.writeHead(503, { 'cache-control': 'no-store', 'retry-after': '15' }).end();
+      return;
     }
+    reply(result);
   }
 
   return { handle };
